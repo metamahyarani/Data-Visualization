@@ -1,0 +1,143 @@
+---
+title: "Data Visualization"
+author: "Meta Mahyarani"
+date: "12/13/2020"
+output: 
+  html_document:
+    theme: cosmo
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Latar Belakang
+
+Data yang saya gunakan dari banktelemarketing yang berasal dari negara portugal. Hal yang harus dilakukan adalah proses preprocessing sedetail mungkin agar data siap untuk diproses.
+
+Dataset yang saya gunakan berasal dari link berikut ini:
+https://archive.ics.uci.edu/ml/datasets/bank+marketing
+
+
+# Import library yang digunakan
+
+```{r}
+library(ggplot2)
+library(tidyr)
+```
+
+# Data Preprocessing
+
+## Read data
+
+```{r}
+telemarket <- read.csv("bank/bank-full.csv", stringsAsFactors = T, sep = ";")
+
+str(telemarket)
+```
+## Missing data
+
+```{r}
+anyNA(telemarket)
+```
+
+```{r}
+colSums(is.na(telemarket))
+```
+
+## Tampilkan 10 data jobs
+```{r}
+head(telemarket$job, 10)
+```
+
+## Summary
+
+```{r}
+summary(telemarket)
+```
+
+Dari summary yang saya dapatkan bahwa saya simpulkan:
+1. Job yang paling banyak yaitu **management**
+2. Marital yang paling banyak yaitu **married**
+3. Housing yang paling banyak yaitu **yes**
+4. Contact yang paling banyak yaitu **celular**
+5. Poutcome yang paling banyak yaitu **failure**
+
+# Business Problem
+
+**1. Kita akan check interaksi antara edukasi dan balance nya
+
+```{r}
+telemarket$durasi_ratio <- telemarket$balance/telemarket$duration
+
+
+ggplot(data = telemarket, mapping = aes(x = poutcome, y = campaign)) +
+  geom_boxplot(mapping = aes(fill = poutcome), show.legend = FALSE) +
+  labs(y = "Campaign", x = "Poutcome",
+       size = "Campaign",
+       title = "Campaign per Poutcome",
+       subtitle = "Bank telemarketing spanyol",
+       caption = "Campaign per Poutcome")
+```
+
+Dari business problem yang nomor 1, saya mendapatkan hasil bahwa terdapat banyak outlier. Outlier yang paling banyak ada di pekerjaan yaitu **unkown**
+
+**2. Job mana yang paling banyak?**
+
+Membuat dataframe baru yang berisi jobs yang terbanyak didalam dataset.
+
+```{r}
+mari <- as.data.frame(table(telemarket$job))
+
+trend_job <- mari[mari$Freq >=938,]
+
+trend_job <- trend_job[order(trend_job$Freq, decreasing = T),]
+```
+```{r}
+ggplot(data = trend_job, mapping = aes(x = Freq, y = reorder(Var1, Freq))) +
+  geom_col(mapping = aes(fill = Freq), , show.legend = FALSE) +
+  geom_text(mapping = aes(label = Freq), color = "black", size = 2, nudge_x = -0.1) +
+  scale_fill_gradient(low = "#6ba832", high = "#32a834")
+```
+
+Dari grafik yang saya dapatkan, saya simpulkan bahwa pekerjaan yang terbanyak yaitu **blue-collar** dan pekerjaan yang paling sedikit yaitu **student** didalam bank telemarketing spanyol.
+
+**3. Berapa rata-rata umur serta rata-rata pendapatan dari perusahaan? Dan adakah terkaitan diantara keduanya?**
+
+```{r}
+telemarket.top.rata <- aggregate.data.frame(x = list(pendapatan_ratio = telemarket$balance/telemarket$campaign, umur_pendapatan_ratio = telemarket$balance/telemarket$age),
+                                            by = list(job = telemarket$job),
+                                            mean)
+```
+
+```{r}
+telemarket_long <- pivot_longer(data = telemarket.top.rata, cols = c("pendapatan_ratio", "umur_pendapatan_ratio"))
+```
+
+```{r}
+ggplot(data = telemarket_long, mapping = aes(x = value, y = job, fill = name)) +
+  # geom_text(mapping = aes(label = value), color = "black", size = 3, nudge_x = -0.3) +
+  geom_col(position = "dodge")
+```
+Dari grafik yang saya dapatkan, saya simpulkan bahwa pendapatan rasio berdasarkan *balance* dan *campaign* menghasilkan bahwa data yang terbanyak ada di retired. Di rentang nilai 1000. Dan umur_pendapatan_ratio berdasarkan *balance* dan *age* di rentang niai kurang lebih 2. 
+
+**4. Adakah keterkaitan antara status dan edukasi?** 
+
+```{r}
+korelasi <- telemarket[order(telemarket$age, telemarket$job, decreasing = T),]
+```
+
+```{r}
+ggplot(data = korelasi, mapping = aes(x = education, y = marital)) +
+  geom_jitter(mapping = aes(col = education)) +
+  facet_wrap(~education, scales = "free") +
+  labs(title = "Terkaitan antara edukasi dan status") +
+  theme(plot.title = element_text(hjust = 0.3))
+```
+
+Dari grafik yang saya dapatkan, saya simpulkan bahwa korelasi antara pendidikan dan status pernikahan menghasilkan bahwa status pernikahan yang paling terbanyak terdapat di pendidikan **secondary**.
